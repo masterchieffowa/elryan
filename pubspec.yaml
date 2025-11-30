@@ -1,0 +1,53 @@
+name: elryan
+description: "Laptop Repair Shop Management System"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  
+  # Database
+  sqflite_common_ffi: ^2.3.4
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  
+  # UI
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+  
+  # Utilities
+  uuid: ^4.5.1
+  file_picker: ^6.2.1
+  csv: ^5.1.1
+  shared_preferences: ^2.3.3
+  crypto: ^3.0.6
+  
+  # Icons
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+  
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: fonts/Cairo-Regular.ttf
+        - asset: fonts/Cairo-Bold.ttf
+          weight: 700
