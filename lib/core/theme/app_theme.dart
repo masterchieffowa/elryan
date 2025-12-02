@@ -8,9 +8,11 @@ class AppTheme {
       seedColor: Colors.blue,
       brightness: Brightness.light,
     ),
-    cardTheme: CardTheme(
+    cardTheme: const CardThemeData(  // Changed from CardTheme
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -35,9 +37,11 @@ class AppTheme {
       seedColor: Colors.blue,
       brightness: Brightness.dark,
     ),
-    cardTheme: CardTheme(
+    cardTheme: const CardThemeData(  // Changed from CardTheme
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(

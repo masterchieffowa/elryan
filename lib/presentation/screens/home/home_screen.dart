@@ -8,6 +8,7 @@ import '../orders/orders_screen.dart';
 import '../accessories/accessories_screen.dart';
 import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
+import '../../../domain/models/models.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);

@@ -1,3 +1,8 @@
+// lib/data/repositories/repair_order_repository.dart
+import '../../core/database/database_helper.dart';
+import '../../domain/models/models.dart';
+import 'package:uuid/uuid.dart';
+
 class RepairOrderRepository {
   final DatabaseHelper _db = DatabaseHelper.instance;
   final _uuid = const Uuid();

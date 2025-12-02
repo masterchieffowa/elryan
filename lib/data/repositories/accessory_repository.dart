@@ -1,7 +1,11 @@
+import '../../core/database/database_helper.dart';
+import '../../domain/models/models.dart';
+import 'package:uuid/uuid.dart';
+
 class AccessoryRepository {
   final DatabaseHelper _db = DatabaseHelper.instance;
   final _uuid = const Uuid();
-
+  
   Future<List<Accessory>> getAll() async {
     final database = await _db.database;
     final maps = await database.query('accessories', orderBy: 'name_ar ASC');

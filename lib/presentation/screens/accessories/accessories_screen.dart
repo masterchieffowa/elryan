@@ -1,9 +1,9 @@
+// lib/presentation/screens/accessories/accessories_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:csv/csv.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:io';
+import '../../../core/l10n/app_localizations.dart';
+import '../../../domain/models/models.dart';
+import '../../providers/providers.dart';
 
 class AccessoriesScreen extends ConsumerWidget {
   const AccessoriesScreen({Key? key}) : super(key: key);
