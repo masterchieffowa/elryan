@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../domain/models/models.dart';
 import '../../providers/providers.dart';
@@ -9,7 +8,7 @@ import '../../providers/providers.dart';
 class OrderFormScreen extends ConsumerStatefulWidget {
   final RepairOrder? order;
 
-  const OrderFormScreen({Key? key, this.order}) : super(key: key);
+  const OrderFormScreen({super.key, this.order});
 
   @override
   ConsumerState<OrderFormScreen> createState() => _OrderFormScreenState();
@@ -21,7 +20,7 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
   final _problemController = TextEditingController();
   final _totalCostController = TextEditingController();
   final _initialPaymentController = TextEditingController();
-  
+
   Customer? _selectedCustomer;
   bool _isSaving = false;
 
@@ -53,7 +52,7 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
               // Customer Selection
               customersAsync.when(
                 data: (customers) => DropdownButtonFormField<Customer>(
-                  value: _selectedCustomer,
+                  initialValue: _selectedCustomer,
                   decoration: InputDecoration(labelText: l10n.customerName),
                   items: customers.map((customer) {
                     return DropdownMenuItem(
@@ -64,28 +63,31 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                   onChanged: (customer) {
                     setState(() => _selectedCustomer = customer);
                   },
-                  validator: (value) => value == null ? l10n.fieldRequired : null,
+                  validator: (value) =>
+                      value == null ? l10n.fieldRequired : null,
                 ),
                 loading: () => const CircularProgressIndicator(),
                 error: (_, __) => const SizedBox(),
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _laptopTypeController,
                 decoration: InputDecoration(labelText: l10n.laptopType),
-                validator: (value) => value?.isEmpty ?? true ? l10n.fieldRequired : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? l10n.fieldRequired : null,
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _problemController,
                 decoration: InputDecoration(labelText: l10n.problemDescription),
                 maxLines: 3,
-                validator: (value) => value?.isEmpty ?? true ? l10n.fieldRequired : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? l10n.fieldRequired : null,
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _totalCostController,
                 decoration: InputDecoration(labelText: l10n.repairCost),
@@ -95,12 +97,13 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                 ],
                 validator: (value) {
                   if (value?.isEmpty ?? true) return l10n.fieldRequired;
-                  if (double.tryParse(value!) == null) return l10n.invalidNumber;
+                  if (double.tryParse(value!) == null)
+                    return l10n.invalidNumber;
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              
+
               TextFormField(
                 controller: _initialPaymentController,
                 decoration: InputDecoration(labelText: l10n.paidAmount),
@@ -110,12 +113,13 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
                 ],
                 validator: (value) {
                   if (value?.isEmpty ?? true) return l10n.fieldRequired;
-                  if (double.tryParse(value!) == null) return l10n.invalidNumber;
+                  if (double.tryParse(value!) == null)
+                    return l10n.invalidNumber;
                   return null;
                 },
               ),
               const SizedBox(height: 32),
-              
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -139,7 +143,7 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
 
     try {
       final repo = ref.read(repairOrderRepositoryProvider);
-      
+
       await repo.create(
         customerId: _selectedCustomer!.id,
         laptopType: _laptopTypeController.text,
@@ -149,7 +153,7 @@ class _OrderFormScreenState extends ConsumerState<OrderFormScreen> {
       );
 
       ref.invalidate(ordersProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
       }

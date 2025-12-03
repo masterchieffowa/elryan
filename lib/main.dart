@@ -39,7 +39,7 @@ void main() async {
 }
 
 class RepairShopApp extends ConsumerWidget {
-  const RepairShopApp({Key? key}) : super(key: key);
+  const RepairShopApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

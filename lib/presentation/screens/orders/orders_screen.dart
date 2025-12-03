@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -8,7 +10,7 @@ import 'order_form_screen.dart';
 import 'order_details_screen.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
-  const OrdersScreen({Key? key}) : super(key: key);
+  const OrdersScreen({super.key});
 
   @override
   ConsumerState<OrdersScreen> createState() => _OrdersScreenState();
@@ -89,10 +91,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: FilterChip(
-                            label: Text(l10n.isArabic ? status.nameAr : status.nameEn),
+                            label: Text(
+                                l10n.isArabic ? status.nameAr : status.nameEn),
                             selected: _filterStatus == status,
                             onSelected: (selected) {
-                              setState(() => _filterStatus = selected ? status : null);
+                              setState(() =>
+                                  _filterStatus = selected ? status : null);
                             },
                           ),
                         );
@@ -110,7 +114,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               data: (orders) {
                 // Apply filters
                 var filteredOrders = orders;
-                
+
                 if (_filterStatus != null) {
                   filteredOrders = filteredOrders
                       .where((order) => order.status == _filterStatus)
@@ -119,8 +123,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
                 if (_searchQuery.isNotEmpty) {
                   filteredOrders = filteredOrders.where((order) {
-                    return order.laptopType.toLowerCase().contains(_searchQuery) ||
-                        order.problemDescription.toLowerCase().contains(_searchQuery);
+                    return order.laptopType
+                            .toLowerCase()
+                            .contains(_searchQuery) ||
+                        order.problemDescription
+                            .toLowerCase()
+                            .contains(_searchQuery);
                   }).toList();
                 }
 
@@ -129,9 +137,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[300]),
+                        Icon(Icons.inbox_outlined,
+                            size: 80, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        Text(l10n.noData, style: TextStyle(color: Colors.grey[600])),
+                        Text(l10n.noData,
+                            style: TextStyle(color: Colors.grey[600])),
                       ],
                     ),
                   );
@@ -158,7 +168,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 class OrderCard extends ConsumerWidget {
   final RepairOrder order;
 
-  const OrderCard({Key? key, required this.order}) : super(key: key);
+  const OrderCard({super.key, required this.order});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -183,7 +193,8 @@ class OrderCard extends ConsumerWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _getStatusColor(order.status).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -206,7 +217,8 @@ class OrderCard extends ConsumerWidget {
               const SizedBox(height: 12),
               Text(
                 order.laptopType,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
@@ -234,7 +246,8 @@ class OrderCard extends ConsumerWidget {
                   ),
                   if (order.remainingAmount > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(8),

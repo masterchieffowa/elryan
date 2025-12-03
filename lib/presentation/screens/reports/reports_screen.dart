@@ -7,12 +7,9 @@ import 'dart:io';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../domain/models/models.dart';
 import '../../providers/providers.dart';
-// Need to import LoginScreen
-import '../auth/login_screen.dart';
-import '../../../core/database/database_helper.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
-  const ReportsScreen({Key? key}) : super(key: key);
+  const ReportsScreen({super.key});
 
   @override
   ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
@@ -59,7 +56,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                 Text(l10n.from),
                                 Text(
                                   DateFormat('yyyy-MM-dd').format(_startDate),
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -86,7 +84,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                 Text(l10n.to),
                                 Text(
                                   DateFormat('yyyy-MM-dd').format(_endDate),
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -164,8 +163,10 @@ class _RevenueReport extends ConsumerWidget {
               order.createdAt.isBefore(endDate.add(const Duration(days: 1)));
         }).toList();
 
-        final totalRevenue = orders.fold<double>(0, (sum, order) => sum + order.totalCost);
-        final totalPaid = orders.fold<double>(0, (sum, order) => sum + order.paidAmount);
+        final totalRevenue =
+            orders.fold<double>(0, (sum, order) => sum + order.totalCost);
+        final totalPaid =
+            orders.fold<double>(0, (sum, order) => sum + order.paidAmount);
         final outstanding = totalRevenue - totalPaid;
 
         return Card(
@@ -226,7 +227,8 @@ class _RevenueReport extends ConsumerWidget {
     );
   }
 
-  Future<void> _exportToCSV(BuildContext context, List<RepairOrder> orders) async {
+  Future<void> _exportToCSV(
+      BuildContext context, List<RepairOrder> orders) async {
     final l10n = AppLocalizations.of(context);
 
     try {
@@ -262,7 +264,8 @@ class _RevenueReport extends ConsumerWidget {
 
       String? outputPath = await FilePicker.platform.saveFile(
         dialogTitle: l10n.exportToCSV,
-        fileName: 'revenue_report_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.csv',
+        fileName:
+            'revenue_report_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.csv',
       );
 
       if (outputPath != null) {
@@ -293,7 +296,8 @@ class _PendingOrdersReport extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final pendingOrdersAsync = ref.watch(ordersByStatusProvider(OrderStatus.pending));
+    final pendingOrdersAsync =
+        ref.watch(ordersByStatusProvider(OrderStatus.pending));
 
     return pendingOrdersAsync.when(
       data: (orders) {
@@ -362,7 +366,8 @@ class _OutstandingBalancesReport extends ConsumerWidget {
             for (var order in orders) {
               if (order.remainingAmount > 0) {
                 customerBalances[order.customerId] =
-                    (customerBalances[order.customerId] ?? 0) + order.remainingAmount;
+                    (customerBalances[order.customerId] ?? 0) +
+                        order.remainingAmount;
               }
             }
 
@@ -381,7 +386,8 @@ class _OutstandingBalancesReport extends ConsumerWidget {
             return Card(
               child: Column(
                 children: sortedEntries.map((entry) {
-                  final customer = customers.firstWhere((c) => c.id == entry.key);
+                  final customer =
+                      customers.firstWhere((c) => c.id == entry.key);
                   return ListTile(
                     leading: CircleAvatar(
                       child: Text(customer.name[0].toUpperCase()),

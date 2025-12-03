@@ -10,7 +10,7 @@ import '../auth/login_screen.dart';
 import '../../../core/database/database_helper.dart';
 
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,7 +30,11 @@ class SettingsScreen extends ConsumerWidget {
             child: ListTile(
               leading: const Icon(Icons.language),
               title: Text(l10n.language),
-              subtitle: Text(currentLocale.languageCode == 'ar' ? l10n.isArabic ? 'العربية' : 'Arabic' : 'English'),
+              subtitle: Text(currentLocale.languageCode == 'ar'
+                  ? l10n.isArabic
+                      ? 'العربية'
+                      : 'Arabic'
+                  : 'English'),
               trailing: Switch(
                 value: currentLocale.languageCode == 'en',
                 onChanged: (value) {
@@ -134,7 +138,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showChangePasswordDialog(BuildContext context, WidgetRef ref) async {
+  Future<void> _showChangePasswordDialog(
+      BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context);
     final currentController = TextEditingController();
     final newController = TextEditingController();
@@ -246,7 +251,8 @@ class SettingsScreen extends ConsumerWidget {
 
     try {
       final dbPath = await DatabaseHelper.instance.getDatabasePath();
-      final timestamp = DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now());
+      final timestamp =
+          DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now());
 
       String? outputPath = await FilePicker.platform.saveFile(
         dialogTitle: l10n.backupDatabase,

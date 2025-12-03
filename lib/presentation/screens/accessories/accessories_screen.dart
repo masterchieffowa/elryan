@@ -1,4 +1,6 @@
 // lib/presentation/screens/accessories/accessories_screen.dart
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/app_localizations.dart';
@@ -6,7 +8,7 @@ import '../../../domain/models/models.dart';
 import '../../providers/providers.dart';
 
 class AccessoriesScreen extends ConsumerWidget {
-  const AccessoriesScreen({Key? key}) : super(key: key);
+  const AccessoriesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +45,6 @@ class AccessoriesScreen extends ConsumerWidget {
               ],
             ),
           ),
-
           Expanded(
             child: accessoriesAsync.when(
               data: (accessories) {
@@ -126,7 +127,8 @@ class AccessoriesScreen extends ConsumerWidget {
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value?.isEmpty ?? true) return l10n.fieldRequired;
-                    if (double.tryParse(value!) == null) return l10n.invalidNumber;
+                    if (double.tryParse(value!) == null)
+                      return l10n.invalidNumber;
                     return null;
                   },
                 ),
@@ -206,7 +208,7 @@ class AccessoriesScreen extends ConsumerWidget {
 class AccessoryCard extends ConsumerWidget {
   final Accessory accessory;
 
-  const AccessoryCard({Key? key, required this.accessory}) : super(key: key);
+  const AccessoryCard({super.key, required this.accessory});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

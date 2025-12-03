@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +11,7 @@ import '../../providers/providers.dart';
 class OrderDetailsScreen extends ConsumerWidget {
   final String orderId;
 
-  const OrderDetailsScreen({Key? key, required this.orderId}) : super(key: key);
+  const OrderDetailsScreen({super.key, required this.orderId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,8 +104,8 @@ class OrderDetailsScreen extends ConsumerWidget {
                             _InfoRow(
                               label: l10n.remainingAmount,
                               value: l10n.currency(order.remainingAmount),
-                              valueColor: order.remainingAmount > 0 
-                                  ? Colors.red 
+                              valueColor: order.remainingAmount > 0
+                                  ? Colors.red
                                   : Colors.green,
                               bold: true,
                             ),
@@ -114,7 +116,8 @@ class OrderDetailsScreen extends ConsumerWidget {
                                 child: ElevatedButton.icon(
                                   icon: const Icon(Icons.payment),
                                   label: Text(l10n.addPayment),
-                                  onPressed: () => _showAddPaymentDialog(context, ref, order),
+                                  onPressed: () => _showAddPaymentDialog(
+                                      context, ref, order),
                                 ),
                               ),
                             ],
@@ -133,7 +136,9 @@ class OrderDetailsScreen extends ConsumerWidget {
                               return Card(
                                 child: ListTile(
                                   title: Text(
-                                    l10n.isArabic ? acc.accessoryNameAr : acc.accessoryNameEn,
+                                    l10n.isArabic
+                                        ? acc.accessoryNameAr
+                                        : acc.accessoryNameEn,
                                   ),
                                   subtitle: Text(
                                     '${acc.quantity} × ${l10n.currency(acc.unitPrice)}',
@@ -161,10 +166,12 @@ class OrderDetailsScreen extends ConsumerWidget {
                             children: order.payments.map((payment) {
                               return Card(
                                 child: ListTile(
-                                  leading: const Icon(Icons.payment, color: Colors.green),
+                                  leading: const Icon(Icons.payment,
+                                      color: Colors.green),
                                   title: Text(l10n.currency(payment.amount)),
                                   subtitle: Text(
-                                    DateFormat('yyyy-MM-dd HH:mm').format(payment.paymentDate),
+                                    DateFormat('yyyy-MM-dd HH:mm')
+                                        .format(payment.paymentDate),
                                   ),
                                   trailing: payment.notes != null
                                       ? Tooltip(
@@ -190,7 +197,8 @@ class OrderDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, {required String title, required Widget child}) {
+  Widget _buildSection(BuildContext context,
+      {required String title, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -238,7 +246,8 @@ class OrderDetailsScreen extends ConsumerWidget {
             children: [
               Text(
                 '${l10n.remainingAmount}: ${l10n.currency(order.remainingAmount)}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -256,9 +265,7 @@ class OrderDetailsScreen extends ConsumerWidget {
                   final amount = double.tryParse(value!);
                   if (amount == null) return l10n.invalidNumber;
                   if (amount <= 0 || amount > order.remainingAmount) {
-                    return l10n.isArabic
-                        ? 'المبلغ غير صحيح'
-                        : 'Invalid amount';
+                    return l10n.isArabic ? 'المبلغ غير صحيح' : 'Invalid amount';
                   }
                   return null;
                 },
@@ -267,7 +274,8 @@ class OrderDetailsScreen extends ConsumerWidget {
               TextField(
                 controller: notesController,
                 decoration: InputDecoration(
-                  labelText: '${l10n.notes} (${l10n.isArabic ? "اختياري" : "Optional"})',
+                  labelText:
+                      '${l10n.notes} (${l10n.isArabic ? "اختياري" : "Optional"})',
                   prefixIcon: const Icon(Icons.note),
                 ),
               ),
@@ -455,7 +463,9 @@ class _StatusChip extends ConsumerWidget {
       initialValue: order.status,
       onSelected: (status) async {
         try {
-          await ref.read(repairOrderRepositoryProvider).updateStatus(order.id, status);
+          await ref
+              .read(repairOrderRepositoryProvider)
+              .updateStatus(order.id, status);
           ref.invalidate(orderDetailsProvider(order.id));
           ref.invalidate(ordersProvider);
 

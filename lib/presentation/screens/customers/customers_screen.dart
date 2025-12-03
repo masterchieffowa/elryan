@@ -5,7 +5,7 @@ import '../../../domain/models/models.dart';
 import '../../providers/providers.dart';
 
 class CustomersScreen extends ConsumerStatefulWidget {
-  const CustomersScreen({Key? key}) : super(key: key);
+  const CustomersScreen({super.key});
 
   @override
   ConsumerState<CustomersScreen> createState() => _CustomersScreenState();
@@ -76,9 +76,11 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.people_outline, size: 80, color: Colors.grey[300]),
+                        Icon(Icons.people_outline,
+                            size: 80, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        Text(l10n.noData, style: TextStyle(color: Colors.grey[600])),
+                        Text(l10n.noData,
+                            style: TextStyle(color: Colors.grey[600])),
                       ],
                     ),
                   );
@@ -101,7 +103,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     );
   }
 
-  Future<void> _showCustomerDialog(BuildContext context, [Customer? customer]) async {
+  Future<void> _showCustomerDialog(BuildContext context,
+      [Customer? customer]) async {
     final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController(text: customer?.name);
     final phoneController = TextEditingController(text: customer?.phone);
@@ -181,7 +184,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
           await repo.update(customer.copyWith(
             name: nameController.text,
             phone: phoneController.text,
-            address: addressController.text.isEmpty ? null : addressController.text,
+            address:
+                addressController.text.isEmpty ? null : addressController.text,
           ));
         }
 
@@ -209,7 +213,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 class CustomerCard extends ConsumerWidget {
   final Customer customer;
 
-  const CustomerCard({Key? key, required this.customer}) : super(key: key);
+  const CustomerCard({super.key, required this.customer});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -222,7 +226,8 @@ class CustomerCard extends ConsumerWidget {
         leading: CircleAvatar(
           child: Text(customer.name[0].toUpperCase()),
         ),
-        title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(customer.name,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -279,7 +284,8 @@ class CustomerCard extends ConsumerWidget {
                               children: [
                                 Text(
                                   l10n.outstandingBalance,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
                                 ),
                                 Text(
                                   l10n.currency(outstanding),
@@ -298,7 +304,9 @@ class CustomerCard extends ConsumerWidget {
                             dense: true,
                             title: Text(order.laptopType),
                             subtitle: Text(
-                              l10n.isArabic ? order.status.nameAr : order.status.nameEn,
+                              l10n.isArabic
+                                  ? order.status.nameAr
+                                  : order.status.nameEn,
                             ),
                             trailing: Text(l10n.currency(order.totalCost)),
                           );
@@ -308,7 +316,8 @@ class CustomerCard extends ConsumerWidget {
                             onPressed: () {
                               // Navigate to customer details
                             },
-                            child: Text('${l10n.isArabic ? "عرض الكل" : "View All"} (${orders.length})'),
+                            child: Text(
+                                '${l10n.isArabic ? "عرض الكل" : "View All"} (${orders.length})'),
                           ),
                       ],
                     );

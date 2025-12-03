@@ -1,7 +1,8 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/app_localizations.dart';
-import '../../../main.dart';
 import '../../providers/providers.dart';
 import '../customers/customers_screen.dart';
 import '../orders/orders_screen.dart';
@@ -11,7 +12,7 @@ import '../settings/settings_screen.dart';
 import '../../../domain/models/models.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -48,9 +49,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               leading: Column(
                 children: [
                   const SizedBox(height: 16),
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 24,
-                    child: Icon(Icons.laptop_mac),
+                    backgroundImage: AssetImage('assets/images/icon.png'),
+                    backgroundColor: Colors.transparent, // optional
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -126,7 +128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // ===================================================================
 // Dashboard Tab Widget
 class DashboardTab extends ConsumerWidget {
-  const DashboardTab({Key? key}) : super(key: key);
+  const DashboardTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -268,7 +270,7 @@ class _StatCard extends StatelessWidget {
 }
 
 class RecentOrdersList extends ConsumerWidget {
-  const RecentOrdersList({Key? key}) : super(key: key);
+  const RecentOrdersList({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -303,9 +305,8 @@ class RecentOrdersList extends ConsumerWidget {
                   ),
                 ),
                 title: Text(order.laptopType),
-                subtitle: Text(l10n.isArabic
-                    ? order.status.nameAr
-                    : order.status.nameEn),
+                subtitle: Text(
+                    l10n.isArabic ? order.status.nameAr : order.status.nameEn),
                 trailing: Text(l10n.currency(order.remainingAmount)),
               ),
             );
