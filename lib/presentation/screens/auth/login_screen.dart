@@ -77,10 +77,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.laptop_mac,
-                    size: 80,
-                    color: Theme.of(context).primaryColor,
+                  const CircleAvatar(
+                    radius: 80,
+                    backgroundImage: AssetImage('assets/images/icon.png'),
+                    backgroundColor: Colors.transparent, // optional
                   ),
                   const SizedBox(height: 24),
                   Text(
