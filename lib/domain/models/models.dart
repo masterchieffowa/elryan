@@ -85,11 +85,78 @@ class Customer {
   }
 }
 
-// Accessory Model
+// Dealer Model (NEW)
+class Dealer {
+  final String id;
+  final String name;
+  final String phone;
+  final String? address;
+  final String? contactPerson;
+  final String? email;
+  final DateTime createdAt;
+
+  Dealer({
+    required this.id,
+    required this.name,
+    required this.phone,
+    this.address,
+    this.contactPerson,
+    this.email,
+    required this.createdAt,
+  });
+
+  factory Dealer.fromMap(Map<String, dynamic> map) {
+    return Dealer(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      phone: map['phone'] as String,
+      address: map['address'] as String?,
+      contactPerson: map['contact_person'] as String?,
+      email: map['email'] as String?,
+      createdAt: DateTime.parse(map['created_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'address': address,
+      'contact_person': contactPerson,
+      'email': email,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  Dealer copyWith({
+    String? id,
+    String? name,
+    String? phone,
+    String? address,
+    String? contactPerson,
+    String? email,
+    DateTime? createdAt,
+  }) {
+    return Dealer(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
+      contactPerson: contactPerson ?? this.contactPerson,
+      email: email ?? this.email,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}
+
+// Accessory Model (Enhanced with category)
 class Accessory {
   final String id;
   final String nameAr;
   final String nameEn;
+  final String? categoryAr;
+  final String? categoryEn;
   final double price;
   final int stockQuantity;
   final DateTime createdAt;
@@ -98,6 +165,8 @@ class Accessory {
     required this.id,
     required this.nameAr,
     required this.nameEn,
+    this.categoryAr,
+    this.categoryEn,
     required this.price,
     required this.stockQuantity,
     required this.createdAt,
@@ -108,6 +177,8 @@ class Accessory {
       id: map['id'] as String,
       nameAr: map['name_ar'] as String,
       nameEn: map['name_en'] as String,
+      categoryAr: map['category_ar'] as String?,
+      categoryEn: map['category_en'] as String?,
       price: (map['price'] as num).toDouble(),
       stockQuantity: map['stock_quantity'] as int,
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -119,6 +190,8 @@ class Accessory {
       'id': id,
       'name_ar': nameAr,
       'name_en': nameEn,
+      'category_ar': categoryAr,
+      'category_en': categoryEn,
       'price': price,
       'stock_quantity': stockQuantity,
       'created_at': createdAt.toIso8601String(),
@@ -129,6 +202,8 @@ class Accessory {
     String? id,
     String? nameAr,
     String? nameEn,
+    String? categoryAr,
+    String? categoryEn,
     double? price,
     int? stockQuantity,
     DateTime? createdAt,
@@ -137,6 +212,8 @@ class Accessory {
       id: id ?? this.id,
       nameAr: nameAr ?? this.nameAr,
       nameEn: nameEn ?? this.nameEn,
+      categoryAr: categoryAr ?? this.categoryAr,
+      categoryEn: categoryEn ?? this.categoryEn,
       price: price ?? this.price,
       stockQuantity: stockQuantity ?? this.stockQuantity,
       createdAt: createdAt ?? this.createdAt,
@@ -144,10 +221,13 @@ class Accessory {
   }
 }
 
-// Repair Order Model
+// Repair Order Model (Enhanced with serial code and dealer)
 class RepairOrder {
   final String id;
-  final String customerId;
+  final String serialCode;
+  final String? customerId;
+  final String? dealerId;
+  final String? deviceOwnerName;
   final String laptopType;
   final String problemDescription;
   final double totalCost;
@@ -156,12 +236,16 @@ class RepairOrder {
   final DateTime createdAt;
   final DateTime? completedAt;
   final DateTime? deliveredAt;
+  final String? notes;
   final List<OrderAccessory> accessories;
   final List<Payment> payments;
 
   RepairOrder({
     required this.id,
-    required this.customerId,
+    required this.serialCode,
+    this.customerId,
+    this.dealerId,
+    this.deviceOwnerName,
     required this.laptopType,
     required this.problemDescription,
     required this.totalCost,
@@ -170,6 +254,7 @@ class RepairOrder {
     required this.createdAt,
     this.completedAt,
     this.deliveredAt,
+    this.notes,
     this.accessories = const [],
     this.payments = const [],
   });
@@ -179,7 +264,10 @@ class RepairOrder {
   factory RepairOrder.fromMap(Map<String, dynamic> map) {
     return RepairOrder(
       id: map['id'] as String,
-      customerId: map['customer_id'] as String,
+      serialCode: map['serial_code'] as String,
+      customerId: map['customer_id'] as String?,
+      dealerId: map['dealer_id'] as String?,
+      deviceOwnerName: map['device_owner_name'] as String?,
       laptopType: map['laptop_type'] as String,
       problemDescription: map['problem_description'] as String,
       totalCost: (map['total_cost'] as num).toDouble(),
@@ -194,13 +282,17 @@ class RepairOrder {
       deliveredAt: map['delivered_at'] != null
           ? DateTime.parse(map['delivered_at'] as String)
           : null,
+      notes: map['notes'] as String?,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'serial_code': serialCode,
       'customer_id': customerId,
+      'dealer_id': dealerId,
+      'device_owner_name': deviceOwnerName,
       'laptop_type': laptopType,
       'problem_description': problemDescription,
       'total_cost': totalCost,
@@ -209,12 +301,16 @@ class RepairOrder {
       'created_at': createdAt.toIso8601String(),
       'completed_at': completedAt?.toIso8601String(),
       'delivered_at': deliveredAt?.toIso8601String(),
+      'notes': notes,
     };
   }
 
   RepairOrder copyWith({
     String? id,
+    String? serialCode,
     String? customerId,
+    String? dealerId,
+    String? deviceOwnerName,
     String? laptopType,
     String? problemDescription,
     double? totalCost,
@@ -223,12 +319,16 @@ class RepairOrder {
     DateTime? createdAt,
     DateTime? completedAt,
     DateTime? deliveredAt,
+    String? notes,
     List<OrderAccessory>? accessories,
     List<Payment>? payments,
   }) {
     return RepairOrder(
       id: id ?? this.id,
+      serialCode: serialCode ?? this.serialCode,
       customerId: customerId ?? this.customerId,
+      dealerId: dealerId ?? this.dealerId,
+      deviceOwnerName: deviceOwnerName ?? this.deviceOwnerName,
       laptopType: laptopType ?? this.laptopType,
       problemDescription: problemDescription ?? this.problemDescription,
       totalCost: totalCost ?? this.totalCost,
@@ -237,6 +337,7 @@ class RepairOrder {
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
       deliveredAt: deliveredAt ?? this.deliveredAt,
+      notes: notes ?? this.notes,
       accessories: accessories ?? this.accessories,
       payments: payments ?? this.payments,
     );

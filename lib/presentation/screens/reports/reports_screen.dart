@@ -250,7 +250,7 @@ class _RevenueReport extends ConsumerWidget {
         rows.add([
           order.id.substring(0, 8),
           DateFormat('yyyy-MM-dd').format(order.createdAt),
-          order.customerId.substring(0, 8),
+          order.customerId?.substring(0, 8),
           order.laptopType,
           order.problemDescription,
           l10n.isArabic ? order.status.nameAr : order.status.nameEn,
@@ -364,9 +364,9 @@ class _OutstandingBalancesReport extends ConsumerWidget {
             final customerBalances = <String, double>{};
 
             for (var order in orders) {
-              if (order.remainingAmount > 0) {
-                customerBalances[order.customerId] =
-                    (customerBalances[order.customerId] ?? 0) +
+              if (order.remainingAmount > 0 && order.customerId != null) {
+                customerBalances[order.customerId!] =
+                    (customerBalances[order.customerId!] ?? 0) +
                         order.remainingAmount;
               }
             }

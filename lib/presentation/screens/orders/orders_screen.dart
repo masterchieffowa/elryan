@@ -19,6 +19,7 @@ class OrdersScreen extends ConsumerStatefulWidget {
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   OrderStatus? _filterStatus;
   String _searchQuery = '';
+  String _serialSearchQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +71,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           ),
                         ).then((_) => ref.invalidate(ordersProvider));
                       },
+                    ),
+                    // Add search by serial code
+                    Expanded(
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          hintText: 'بحث بالسيريال...',
+                          prefixIcon: Icon(Icons.qr_code),
+                        ),
+                        onChanged: (value) {
+                          setState(() => _serialSearchQuery = value);
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -145,6 +158,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       ],
                     ),
                   );
+                }
+
+                // In filtering logic
+                if (_serialSearchQuery.isNotEmpty) {
+                  filteredOrders = filteredOrders.where((order) {
+                    return order.serialCode
+                        .toLowerCase()
+                        .contains(_serialSearchQuery.toLowerCase());
+                  }).toList();
                 }
 
                 return ListView.builder(

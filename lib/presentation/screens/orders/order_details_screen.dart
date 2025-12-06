@@ -70,11 +70,12 @@ class OrderDetailsScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Customer Info
-                      _buildSection(
-                        context,
-                        title: l10n.customers,
-                        child: _CustomerInfo(customerId: order.customerId),
-                      ),
+                      if (order.customerId != null)
+                        _buildSection(
+                          context,
+                          title: l10n.customers,
+                          child: _CustomerInfo(customerId: order.customerId!),
+                        ),
                       const SizedBox(height: 24),
 
                       // Problem Description
