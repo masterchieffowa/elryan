@@ -149,6 +149,20 @@ class AppLocalizations {
   String get passwordMismatch =>
       isArabic ? 'كلمات المرور غير متطابقة' : 'Passwords do not match';
 
+// Dealers
+  String get dealers => isArabic ? 'الموزعين' : 'Dealers';
+  String get newDealer => isArabic ? 'موزع جديد' : 'New Dealer';
+  String get dealerName => isArabic ? 'اسم الموزع' : 'Dealer Name';
+  String get contactPerson => isArabic ? 'الشخص المسؤول' : 'Contact Person';
+  String get email => isArabic ? 'البريد الإلكتروني' : 'Email';
+  String get deviceOwnerName =>
+      isArabic ? 'اسم صاحب الجهاز' : 'Device Owner Name';
+  String get orderType => isArabic ? 'نوع الطلب' : 'Order Type';
+  String get directCustomer => isArabic ? 'عميل مباشر' : 'Direct Customer';
+  String get fromDealer => isArabic ? 'من موزع' : 'From Dealer';
+  String get serialCode => isArabic ? 'رقم التسلسل' : 'Serial Code';
+  String get searchBySerial => isArabic ? 'بحث بالسيريال' : 'Search by Serial';
+
   // Currency
   String currency(double amount) {
     return isArabic

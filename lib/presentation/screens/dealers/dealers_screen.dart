@@ -1,32 +1,58 @@
+import 'package:elryan/core/database/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../domain/models/models.dart';
-import '../../providers/providers.dart';
+import '../../../data/repositories/dealer_repository.dart';
 
-class CustomersScreen extends ConsumerStatefulWidget {
-  const CustomersScreen({super.key});
+// Dealer Provider
+final dealerRepositoryProvider = Provider((ref) => DealerRepository());
+
+final dealersProvider = FutureProvider<List<Dealer>>((ref) async {
+  final repo = ref.watch(dealerRepositoryProvider);
+  return await repo.getAll();
+});
+
+final dealerOrdersProvider = FutureProvider.family<List<RepairOrder>, String>(
+  (ref, dealerId) async {
+    final database = await DatabaseHelper.instance.database;
+    final maps = await database.query('repair_orders',
+        where: 'dealer_id = ?',
+        whereArgs: [dealerId],
+        orderBy: 'created_at DESC');
+
+    final orders = <RepairOrder>[];
+    for (var map in maps) {
+      final order = RepairOrder.fromMap(map);
+      orders.add(order);
+    }
+    return orders;
+  },
+);
+
+class DealersScreen extends ConsumerStatefulWidget {
+  const DealersScreen({super.key});
 
   @override
-  ConsumerState<CustomersScreen> createState() => _CustomersScreenState();
+  ConsumerState<DealersScreen> createState() => _DealersScreenState();
 }
 
-class _CustomersScreenState extends ConsumerState<CustomersScreen> {
+class _DealersScreenState extends ConsumerState<DealersScreen> {
   String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final customersAsync = ref.watch(customersProvider);
+    final dealersAsync = ref.watch(dealersProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.customers),
+        title: Text(l10n.isArabic ? 'الموزعين' : 'Dealers'),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(customersProvider),
+            onPressed: () => ref.invalidate(dealersProvider),
           ),
         ],
       ),
@@ -51,32 +77,32 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.add),
-                  label: Text(l10n.newCustomer),
-                  onPressed: () => _showCustomerDialog(context),
+                  label: Text(l10n.isArabic ? 'موزع جديد' : 'New Dealer'),
+                  onPressed: () => _showDealerDialog(context),
                 ),
               ],
             ),
           ),
 
-          // Customers List
+          // Dealers List
           Expanded(
-            child: customersAsync.when(
-              data: (customers) {
-                var filteredCustomers = customers;
+            child: dealersAsync.when(
+              data: (dealers) {
+                var filteredDealers = dealers;
 
                 if (_searchQuery.isNotEmpty) {
-                  filteredCustomers = customers.where((customer) {
-                    return customer.name.toLowerCase().contains(_searchQuery) ||
-                        customer.phone.contains(_searchQuery);
+                  filteredDealers = dealers.where((dealer) {
+                    return dealer.name.toLowerCase().contains(_searchQuery) ||
+                        dealer.phone.contains(_searchQuery);
                   }).toList();
                 }
 
-                if (filteredCustomers.isEmpty) {
+                if (filteredDealers.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.people_outline,
+                        Icon(Icons.business_outlined,
                             size: 80, color: Colors.grey[300]),
                         const SizedBox(height: 16),
                         Text(l10n.noData,
@@ -88,14 +114,14 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: filteredCustomers.length,
+                  itemCount: filteredDealers.length,
                   itemBuilder: (context, index) {
-                    return CustomerCard(
-                      customer: filteredCustomers[index],
-                      onEdit: () => _showCustomerDialog(
-                          context, filteredCustomers[index]),
-                      onDelete: () => _deleteCustomer(
-                          context, ref, filteredCustomers[index]),
+                    return DealerCard(
+                      dealer: filteredDealers[index],
+                      onEdit: () =>
+                          _showDealerDialog(context, filteredDealers[index]),
+                      onDelete: () =>
+                          _deleteDealer(context, ref, filteredDealers[index]),
                     );
                   },
                 );
@@ -109,54 +135,79 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
     );
   }
 
-  Future<void> _showCustomerDialog(BuildContext context,
-      [Customer? customer]) async {
+  Future<void> _showDealerDialog(BuildContext context, [Dealer? dealer]) async {
     final l10n = AppLocalizations.of(context);
-    final nameController = TextEditingController(text: customer?.name);
-    final phoneController = TextEditingController(text: customer?.phone);
-    final addressController = TextEditingController(text: customer?.address);
+    final nameController = TextEditingController(text: dealer?.name);
+    final phoneController = TextEditingController(text: dealer?.phone);
+    final addressController = TextEditingController(text: dealer?.address);
+    final contactPersonController =
+        TextEditingController(text: dealer?.contactPerson);
+    final emailController = TextEditingController(text: dealer?.email);
     final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(customer == null ? l10n.newCustomer : l10n.edit),
+        title: Text(dealer == null
+            ? (l10n.isArabic ? 'موزع جديد' : 'New Dealer')
+            : l10n.edit),
         content: Form(
           key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.customerName,
-                  prefixIcon: const Icon(Icons.person),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: l10n.isArabic ? 'اسم الموزع' : 'Dealer Name',
+                    prefixIcon: const Icon(Icons.business),
+                  ),
+                  validator: (value) =>
+                      value?.isEmpty ?? true ? l10n.fieldRequired : null,
                 ),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? l10n.fieldRequired : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: phoneController,
-                decoration: InputDecoration(
-                  labelText: l10n.phoneNumber,
-                  prefixIcon: const Icon(Icons.phone),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: phoneController,
+                  decoration: InputDecoration(
+                    labelText: l10n.phoneNumber,
+                    prefixIcon: const Icon(Icons.phone),
+                  ),
+                  keyboardType: TextInputType.phone,
+                  validator: (value) =>
+                      value?.isEmpty ?? true ? l10n.fieldRequired : null,
                 ),
-                keyboardType: TextInputType.phone,
-                validator: (value) =>
-                    value?.isEmpty ?? true ? l10n.fieldRequired : null,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: addressController,
-                decoration: InputDecoration(
-                  labelText:
-                      '${l10n.address} (${l10n.isArabic ? "اختياري" : "Optional"})',
-                  prefixIcon: const Icon(Icons.location_on),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: addressController,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${l10n.address} (${l10n.isArabic ? "اختياري" : "Optional"})',
+                    prefixIcon: const Icon(Icons.location_on),
+                  ),
+                  maxLines: 2,
                 ),
-                maxLines: 2,
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: contactPersonController,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${l10n.isArabic ? "الشخص المسؤول" : "Contact Person"} (${l10n.isArabic ? "اختياري" : "Optional"})',
+                    prefixIcon: const Icon(Icons.person),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${l10n.isArabic ? "البريد الإلكتروني" : "Email"} (${l10n.isArabic ? "اختياري" : "Optional"})',
+                    prefixIcon: const Icon(Icons.email),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -178,24 +229,33 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
     if (result == true) {
       try {
-        final repo = ref.read(customerRepositoryProvider);
+        final repo = ref.read(dealerRepositoryProvider);
 
-        if (customer == null) {
+        if (dealer == null) {
           await repo.create(
-            nameController.text,
-            phoneController.text,
-            addressController.text.isEmpty ? null : addressController.text,
-          );
-        } else {
-          await repo.update(customer.copyWith(
             name: nameController.text,
             phone: phoneController.text,
             address:
                 addressController.text.isEmpty ? null : addressController.text,
+            contactPerson: contactPersonController.text.isEmpty
+                ? null
+                : contactPersonController.text,
+            email: emailController.text.isEmpty ? null : emailController.text,
+          );
+        } else {
+          await repo.update(dealer.copyWith(
+            name: nameController.text,
+            phone: phoneController.text,
+            address:
+                addressController.text.isEmpty ? null : addressController.text,
+            contactPerson: contactPersonController.text.isEmpty
+                ? null
+                : contactPersonController.text,
+            email: emailController.text.isEmpty ? null : emailController.text,
           ));
         }
 
-        ref.invalidate(customersProvider);
+        ref.invalidate(dealersProvider);
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -214,65 +274,65 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
       }
     }
   }
-}
 
-Future<void> _deleteCustomer(
-    BuildContext context, WidgetRef ref, Customer customer) async {
-  final l10n = AppLocalizations.of(context);
+  Future<void> _deleteDealer(
+      BuildContext context, WidgetRef ref, Dealer dealer) async {
+    final l10n = AppLocalizations.of(context);
 
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(l10n.delete),
-      content: Text(l10n.deleteConfirm),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(l10n.cancel),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: Text(l10n.delete),
-        ),
-      ],
-    ),
-  );
-
-  if (result == true) {
-    try {
-      await ref.read(customerRepositoryProvider).delete(customer.id);
-      ref.invalidate(customersProvider);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.deleteSuccess),
-            backgroundColor: Colors.green,
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.delete),
+        content: Text(l10n.deleteConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
           ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(l10n.delete),
           ),
-        );
+        ],
+      ),
+    );
+
+    if (result == true) {
+      try {
+        await ref.read(dealerRepositoryProvider).delete(dealer.id);
+        ref.invalidate(dealersProvider);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.deleteSuccess),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
 }
 
-class CustomerCard extends ConsumerWidget {
-  final Customer customer;
+class DealerCard extends ConsumerWidget {
+  final Dealer dealer;
   final void Function() onEdit;
   final void Function() onDelete;
 
-  const CustomerCard({
+  const DealerCard({
     super.key,
-    required this.customer,
+    required this.dealer,
     required this.onEdit,
     required this.onDelete,
   });
@@ -280,7 +340,7 @@ class CustomerCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final ordersAsync = ref.watch(customerOrdersProvider(customer.id));
+    final ordersAsync = ref.watch(dealerOrdersProvider(dealer.id));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -315,9 +375,13 @@ class CustomerCard extends ConsumerWidget {
           ],
         ),
         leading: CircleAvatar(
-          child: Text(customer.name[0].toUpperCase()),
+          backgroundColor: Colors.blue,
+          child: Text(
+            dealer.name[0].toUpperCase(),
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
-        title: Text(customer.name,
+        title: Text(dealer.name,
             style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,15 +390,23 @@ class CustomerCard extends ConsumerWidget {
               children: [
                 const Icon(Icons.phone, size: 16),
                 const SizedBox(width: 4),
-                Text(customer.phone),
+                Text(dealer.phone),
               ],
             ),
-            if (customer.address != null)
+            if (dealer.contactPerson != null)
               Row(
                 children: [
-                  const Icon(Icons.location_on, size: 16),
+                  const Icon(Icons.person, size: 16),
                   const SizedBox(width: 4),
-                  Expanded(child: Text(customer.address!)),
+                  Text(dealer.contactPerson!),
+                ],
+              ),
+            if (dealer.email != null)
+              Row(
+                children: [
+                  const Icon(Icons.email, size: 16),
+                  const SizedBox(width: 4),
+                  Text(dealer.email!),
                 ],
               ),
           ],
@@ -346,7 +418,7 @@ class CustomerCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.customerHistory,
+                  l10n.isArabic ? 'الأجهزة المرسلة' : 'Submitted Devices',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -363,7 +435,33 @@ class CustomerCard extends ConsumerWidget {
 
                     return Column(
                       children: [
-                        if (outstanding > 0)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                l10n.isArabic ? 'عدد الأجهزة' : 'Total Devices',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '${orders.length}',
+                                style: TextStyle(
+                                  color: Colors.blue[700],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (outstanding > 0) ...[
+                          const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -389,15 +487,23 @@ class CustomerCard extends ConsumerWidget {
                               ],
                             ),
                           ),
+                        ],
                         const SizedBox(height: 12),
                         ...orders.take(3).map((order) {
                           return ListTile(
                             dense: true,
-                            title: Text(order.laptopType),
-                            subtitle: Text(
-                              l10n.isArabic
-                                  ? order.status.nameAr
-                                  : order.status.nameEn,
+                            title:
+                                Text(order.deviceOwnerName ?? order.laptopType),
+                            subtitle: Row(
+                              children: [
+                                Text(order.laptopType),
+                                const Text(' - '),
+                                Text(
+                                  l10n.isArabic
+                                      ? order.status.nameAr
+                                      : order.status.nameEn,
+                                ),
+                              ],
                             ),
                             trailing: Text(l10n.currency(order.totalCost)),
                           );
@@ -405,7 +511,7 @@ class CustomerCard extends ConsumerWidget {
                         if (orders.length > 3)
                           TextButton(
                             onPressed: () {
-                              // Navigate to customer details
+                              // Navigate to dealer details
                             },
                             child: Text(
                                 '${l10n.isArabic ? "عرض الكل" : "View All"} (${orders.length})'),

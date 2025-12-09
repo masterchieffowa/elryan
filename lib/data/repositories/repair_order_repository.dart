@@ -1,6 +1,6 @@
-// lib/data/repositories/repair_order_repository.dart
 import '../../core/database/database_helper.dart';
 import '../../domain/models/models.dart';
+import '../../core/utils/serial_generator.dart';
 import 'package:uuid/uuid.dart';
 
 class RepairOrderRepository {
@@ -34,10 +34,24 @@ class RepairOrderRepository {
     return order.copyWith(accessories: accessories, payments: payments);
   }
 
+  Future<RepairOrder?> getBySerialCode(String serialCode) async {
+    final database = await _db.database;
+    final maps = await database.query('repair_orders',
+        where: 'serial_code = ?', whereArgs: [serialCode]);
+    if (maps.isEmpty) return null;
+
+    final order = RepairOrder.fromMap(maps.first);
+    final accessories = await _getOrderAccessories(order.id);
+    final payments = await _getOrderPayments(order.id);
+    return order.copyWith(accessories: accessories, payments: payments);
+  }
+
   Future<List<RepairOrder>> getByStatus(OrderStatus status) async {
     final database = await _db.database;
     final maps = await database.query('repair_orders',
-        where: 'status = ?', whereArgs: [status.name], orderBy: 'created_at DESC');
+        where: 'status = ?',
+        whereArgs: [status.name],
+        orderBy: 'created_at DESC');
 
     final orders = <RepairOrder>[];
     for (var map in maps) {
@@ -66,6 +80,23 @@ class RepairOrderRepository {
     return orders;
   }
 
+  Future<List<RepairOrder>> getByDealer(String dealerId) async {
+    final database = await _db.database;
+    final maps = await database.query('repair_orders',
+        where: 'dealer_id = ?',
+        whereArgs: [dealerId],
+        orderBy: 'created_at DESC');
+
+    final orders = <RepairOrder>[];
+    for (var map in maps) {
+      final order = RepairOrder.fromMap(map);
+      final accessories = await _getOrderAccessories(order.id);
+      final payments = await _getOrderPayments(order.id);
+      orders.add(order.copyWith(accessories: accessories, payments: payments));
+    }
+    return orders;
+  }
+
   Future<List<OrderAccessory>> _getOrderAccessories(String orderId) async {
     final database = await _db.database;
     final maps = await database.query('order_accessories',
@@ -76,10 +107,13 @@ class RepairOrderRepository {
   Future<List<Payment>> _getOrderPayments(String orderId) async {
     final database = await _db.database;
     final maps = await database.query('payments',
-        where: 'order_id = ?', whereArgs: [orderId], orderBy: 'payment_date DESC');
+        where: 'order_id = ?',
+        whereArgs: [orderId],
+        orderBy: 'payment_date DESC');
     return maps.map((map) => Payment.fromMap(map)).toList();
   }
 
+  // Original create method for backward compatibility
   Future<String> create({
     required String customerId,
     required String laptopType,
@@ -88,13 +122,41 @@ class RepairOrderRepository {
     required double initialPayment,
     List<OrderAccessory>? accessories,
   }) async {
+    final serialCode = SerialCodeGenerator.generate();
+    return await createWithSerial(
+      serialCode: serialCode,
+      customerId: customerId,
+      laptopType: laptopType,
+      problemDescription: problemDescription,
+      totalCost: totalCost,
+      initialPayment: initialPayment,
+      accessories: accessories,
+    );
+  }
+
+  // New create method with full serial code and dealer support
+  Future<String> createWithSerial({
+    required String serialCode,
+    String? customerId,
+    String? dealerId,
+    String? deviceOwnerName,
+    required String laptopType,
+    required String problemDescription,
+    required double totalCost,
+    required double initialPayment,
+    List<OrderAccessory>? accessories,
+    String? notes,
+  }) async {
     final database = await _db.database;
     final orderId = _uuid.v4();
 
     // Insert order
     await database.insert('repair_orders', {
       'id': orderId,
+      'serial_code': serialCode,
       'customer_id': customerId,
+      'dealer_id': dealerId,
+      'device_owner_name': deviceOwnerName,
       'laptop_type': laptopType,
       'problem_description': problemDescription,
       'total_cost': totalCost,
@@ -103,6 +165,7 @@ class RepairOrderRepository {
       'created_at': DateTime.now().toIso8601String(),
       'completed_at': null,
       'delivered_at': null,
+      'notes': notes,
     });
 
     // Insert initial payment if any
@@ -188,8 +251,7 @@ class RepairOrderRepository {
   Future<Map<String, dynamic>> getStatistics() async {
     final database = await _db.database;
 
-    final totalOrders =
-        (await database.query('repair_orders')).length;
+    final totalOrders = (await database.query('repair_orders')).length;
     final pendingOrders = (await database.query('repair_orders',
             where: 'status = ?', whereArgs: [OrderStatus.pending.name]))
         .length;
@@ -201,8 +263,7 @@ class RepairOrderRepository {
         'SELECT SUM(total_cost) as total, SUM(paid_amount) as paid FROM repair_orders');
     final totalRevenue =
         (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
-    final totalPaid =
-        (revenueResult.first['paid'] as num?)?.toDouble() ?? 0.0;
+    final totalPaid = (revenueResult.first['paid'] as num?)?.toDouble() ?? 0.0;
     final outstanding = totalRevenue - totalPaid;
 
     return {
@@ -219,10 +280,7 @@ class RepairOrderRepository {
     final database = await _db.database;
     final maps = await database.query('repair_orders',
         where: 'created_at BETWEEN ? AND ?',
-        whereArgs: [
-          startDate.toIso8601String(),
-          endDate.toIso8601String()
-        ],
+        whereArgs: [startDate.toIso8601String(), endDate.toIso8601String()],
         orderBy: 'created_at DESC');
 
     final orders = <RepairOrder>[];

@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../customers/customers_screen.dart';
 import '../orders/orders_screen.dart';
 import '../accessories/accessories_screen.dart';
+import '../dealers/dealers_screen.dart';
 import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
 import '../../../domain/models/models.dart';
@@ -30,6 +31,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       const DashboardTab(),
       const OrdersScreen(),
       const CustomersScreen(),
+      const DealersScreen(), // NEW: Dealers tab
       const AccessoriesScreen(),
       const ReportsScreen(),
     ];
@@ -52,7 +54,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const CircleAvatar(
                     radius: 24,
                     backgroundImage: AssetImage('assets/images/icon.png'),
-                    backgroundColor: Colors.transparent, // optional
+                    backgroundColor: Colors.transparent,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -100,6 +102,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   label: Text(l10n.customers),
                 ),
                 NavigationRailDestination(
+                  icon: const Icon(Icons.business_outlined),
+                  selectedIcon: const Icon(Icons.business),
+                  label: Text(l10n.isArabic ? 'الموزعين' : 'Dealers'),
+                ),
+                NavigationRailDestination(
                   icon: const Icon(Icons.inventory_2_outlined),
                   selectedIcon: const Icon(Icons.inventory_2),
                   label: Text(l10n.accessories),
@@ -125,8 +132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ===================================================================
-// Dashboard Tab Widget
+// Dashboard Tab remains the same
 class DashboardTab extends ConsumerWidget {
   const DashboardTab({super.key});
 

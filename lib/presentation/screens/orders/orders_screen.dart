@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -60,6 +58,20 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
+
+                    // Add search by serial code
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: l10n.searchBySerial,
+                          prefixIcon: const Icon(Icons.qr_code),
+                        ),
+                        onChanged: (value) {
+                          setState(() => _serialSearchQuery = value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.add),
                       label: Text(l10n.newOrder),
@@ -71,18 +83,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           ),
                         ).then((_) => ref.invalidate(ordersProvider));
                       },
-                    ),
-                    // Add search by serial code
-                    Expanded(
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          hintText: 'بحث بالسيريال...',
-                          prefixIcon: Icon(Icons.qr_code),
-                        ),
-                        onChanged: (value) {
-                          setState(() => _serialSearchQuery = value);
-                        },
-                      ),
                     ),
                   ],
                 ),
