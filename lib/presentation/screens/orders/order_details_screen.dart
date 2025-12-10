@@ -1,12 +1,14 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/l10n/app_localizations.dart';
+import '../../../core/database/database_helper.dart';
 import '../../../domain/models/models.dart';
+import '../../../core/services/receipt_printer.dart';
 import '../../providers/providers.dart';
+import '../dealers/dealers_screen.dart';
 
 class OrderDetailsScreen extends ConsumerWidget {
   final String orderId;
@@ -22,6 +24,17 @@ class OrderDetailsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.orderDetails),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () =>
+                _showEditOrderDialog(context, ref, orderAsync.value),
+            tooltip: l10n.edit,
+          ),
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: () => _printReceipt(context, ref, orderAsync.value),
+            tooltip: l10n.isArabic ? 'طباعة' : 'Print',
+          ),
           IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () => _confirmDelete(context, ref),
@@ -48,17 +61,25 @@ class OrderDetailsScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            order.laptopType,
-                            style: Theme.of(context).textTheme.headlineSmall,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  order.laptopType,
+                                  style:
+                                      Theme.of(context).textTheme.headlineSmall,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${l10n.createdDate}: ${DateFormat('yyyy-MM-dd HH:mm').format(order.createdAt)}',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
                           ),
                           _StatusChip(order: order),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${l10n.createdDate}: ${DateFormat('yyyy-MM-dd HH:mm').format(order.createdAt)}',
-                        style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -75,6 +96,15 @@ class OrderDetailsScreen extends ConsumerWidget {
                           context,
                           title: l10n.customers,
                           child: _CustomerInfo(customerId: order.customerId!),
+                        )
+                      else if (order.dealerId != null)
+                        _buildSection(
+                          context,
+                          title: l10n.dealers,
+                          child: _DealerInfo(
+                            dealerId: order.dealerId!,
+                            deviceOwnerName: order.deviceOwnerName,
+                          ),
                         ),
                       const SizedBox(height: 24),
 
@@ -128,34 +158,48 @@ class OrderDetailsScreen extends ConsumerWidget {
                       const SizedBox(height: 24),
 
                       // Accessories
-                      if (order.accessories.isNotEmpty)
-                        _buildSection(
-                          context,
-                          title: l10n.accessories,
-                          child: Column(
-                            children: order.accessories.map((acc) {
-                              return Card(
-                                child: ListTile(
-                                  title: Text(
-                                    l10n.isArabic
-                                        ? acc.accessoryNameAr
-                                        : acc.accessoryNameEn,
-                                  ),
-                                  subtitle: Text(
-                                    '${acc.quantity} × ${l10n.currency(acc.unitPrice)}',
-                                  ),
-                                  trailing: Text(
-                                    l10n.currency(acc.totalPrice),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                      _buildSection(
+                        context,
+                        title: l10n.accessories,
+                        child: Column(
+                          children: [
+                            if (order.accessories.isNotEmpty)
+                              ...order.accessories.map((acc) {
+                                return Card(
+                                  child: ListTile(
+                                    title: Text(
+                                      l10n.isArabic
+                                          ? acc.accessoryNameAr
+                                          : acc.accessoryNameEn,
+                                    ),
+                                    subtitle: Text(
+                                      '${acc.quantity} × ${l10n.currency(acc.unitPrice)}',
+                                    ),
+                                    trailing: Text(
+                                      l10n.currency(acc.totalPrice),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
+                                );
+                              }).toList(),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.add_shopping_cart),
+                                label: Text(l10n.isArabic
+                                    ? 'إضافة إكسسوارات'
+                                    : 'Add Accessories'),
+                                onPressed: () => _showAddAccessoriesDialog(
+                                    context, ref, order),
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
                       const SizedBox(height: 24),
 
                       // Payment History
@@ -223,6 +267,344 @@ class OrderDetailsScreen extends ConsumerWidget {
         return Colors.green;
       case OrderStatus.delivered:
         return Colors.teal;
+    }
+  }
+
+  Future<void> _showEditOrderDialog(
+    BuildContext context,
+    WidgetRef ref,
+    RepairOrder? order,
+  ) async {
+    if (order == null) return;
+
+    final l10n = AppLocalizations.of(context);
+    final laptopTypeController = TextEditingController(text: order.laptopType);
+    final problemController =
+        TextEditingController(text: order.problemDescription);
+    final notesController = TextEditingController(text: order.notes);
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.edit),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: laptopTypeController,
+                  decoration: InputDecoration(labelText: l10n.laptopType),
+                  validator: (value) =>
+                      value?.isEmpty ?? true ? l10n.fieldRequired : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: problemController,
+                  decoration:
+                      InputDecoration(labelText: l10n.problemDescription),
+                  maxLines: 3,
+                  validator: (value) =>
+                      value?.isEmpty ?? true ? l10n.fieldRequired : null,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${l10n.notes} (${l10n.isArabic ? "اختياري" : "Optional"})',
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(context, true);
+              }
+            },
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      try {
+        // Update order in database using DatabaseHelper
+        final dbHelper = DatabaseHelper.instance;
+        final database = await dbHelper.database;
+
+        await database.update(
+          'repair_orders',
+          {
+            'laptop_type': laptopTypeController.text,
+            'problem_description': problemController.text,
+            'notes': notesController.text.isEmpty ? null : notesController.text,
+          },
+          where: 'id = ?',
+          whereArgs: [order.id],
+        );
+
+        ref.invalidate(orderDetailsProvider(orderId));
+        ref.invalidate(ordersProvider);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.saveSuccess),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showAddAccessoriesDialog(
+    BuildContext context,
+    WidgetRef ref,
+    RepairOrder order,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final accessoriesAsync = ref.read(accessoriesProvider);
+
+    if (!accessoriesAsync.hasValue) return;
+
+    final accessories = accessoriesAsync.value!;
+    final selectedItems = <Accessory, int>{};
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final total = selectedItems.entries.fold<double>(
+            0,
+            (sum, entry) => sum + (entry.key.price * entry.value),
+          );
+
+          return AlertDialog(
+            title: Text(l10n.isArabic
+                ? 'إضافة إكسسوارات للطلب'
+                : 'Add Accessories to Order'),
+            content: SizedBox(
+              width: 500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 300,
+                    child: ListView.builder(
+                      itemCount: accessories.length,
+                      itemBuilder: (context, index) {
+                        final accessory = accessories[index];
+                        final isSelected = selectedItems.containsKey(accessory);
+
+                        return ListTile(
+                          title: Text(l10n.isArabic
+                              ? accessory.nameAr
+                              : accessory.nameEn),
+                          subtitle: Text(
+                              '${l10n.price}: ${l10n.currency(accessory.price)} | ${l10n.stockQuantity}: ${accessory.stockQuantity}'),
+                          trailing: isSelected
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove),
+                                      onPressed: () {
+                                        setState(() {
+                                          if (selectedItems[accessory]! > 1) {
+                                            selectedItems[accessory] =
+                                                selectedItems[accessory]! - 1;
+                                          } else {
+                                            selectedItems.remove(accessory);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                    Text('${selectedItems[accessory]}'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        if (selectedItems[accessory]! <
+                                            accessory.stockQuantity) {
+                                          setState(() {
+                                            selectedItems[accessory] =
+                                                selectedItems[accessory]! + 1;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                )
+                              : ElevatedButton(
+                                  onPressed: accessory.stockQuantity > 0
+                                      ? () {
+                                          setState(() {
+                                            selectedItems[accessory] = 1;
+                                          });
+                                        }
+                                      : null,
+                                  child: const Icon(Icons.add),
+                                ),
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(l10n.isArabic ? 'الإجمالي:' : 'Total:',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(l10n.currency(total),
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: selectedItems.isEmpty
+                    ? null
+                    : () => Navigator.pop(context, true),
+                child: Text(l10n.add),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (result == true && selectedItems.isNotEmpty) {
+      try {
+        final dbHelper = DatabaseHelper.instance;
+        final database = await dbHelper.database;
+        final uuid = const Uuid();
+
+        // Add accessories to order
+        for (var entry in selectedItems.entries) {
+          final accessory = entry.key;
+          final quantity = entry.value;
+
+          await database.insert('order_accessories', {
+            'id': uuid.v4(),
+            'order_id': order.id,
+            'accessory_id': accessory.id,
+            'accessory_name_ar': accessory.nameAr,
+            'accessory_name_en': accessory.nameEn,
+            'quantity': quantity,
+            'unit_price': accessory.price,
+            'total_price': accessory.price * quantity,
+          });
+
+          // Update stock
+          await database.rawUpdate(
+            'UPDATE accessories SET stock_quantity = stock_quantity - ? WHERE id = ?',
+            [quantity, accessory.id],
+          );
+        }
+
+        // Update order total cost
+        final newTotal = order.totalCost +
+            selectedItems.entries.fold<double>(
+              0,
+              (sum, entry) => sum + (entry.key.price * entry.value),
+            );
+
+        await database.update(
+          'repair_orders',
+          {'total_cost': newTotal},
+          where: 'id = ?',
+          whereArgs: [order.id],
+        );
+
+        ref.invalidate(orderDetailsProvider(orderId));
+        ref.invalidate(ordersProvider);
+        ref.invalidate(accessoriesProvider);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.saveSuccess),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _printReceipt(
+    BuildContext context,
+    WidgetRef ref,
+    RepairOrder? order,
+  ) async {
+    if (order == null) return;
+
+    try {
+      Customer? customer;
+      Dealer? dealer;
+
+      if (order.customerId != null) {
+        final customersAsync = ref.read(customersProvider);
+        if (customersAsync.hasValue) {
+          customer =
+              customersAsync.value!.firstWhere((c) => c.id == order.customerId);
+        }
+      } else if (order.dealerId != null) {
+        final dealersAsync = ref.read(dealersProvider);
+        if (dealersAsync.hasValue) {
+          dealer =
+              dealersAsync.value!.firstWhere((d) => d.id == order.dealerId);
+        }
+      }
+
+      await ReceiptPrinter.printReceipt(order, customer, dealer);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Print error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -400,6 +782,46 @@ class _CustomerInfo extends ConsumerWidget {
                 _InfoRow(label: l10n.phoneNumber, value: customer.phone),
                 if (customer.address != null)
                   _InfoRow(label: l10n.address, value: customer.address!),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const CircularProgressIndicator(),
+      error: (_, __) => Text(l10n.error),
+    );
+  }
+}
+
+// Dealer Info Widget
+class _DealerInfo extends ConsumerWidget {
+  final String dealerId;
+  final String? deviceOwnerName;
+
+  const _DealerInfo({required this.dealerId, this.deviceOwnerName});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final dealersAsync = ref.watch(dealersProvider);
+
+    return dealersAsync.when(
+      data: (dealers) {
+        final dealer = dealers.firstWhere((d) => d.id == dealerId);
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _InfoRow(label: l10n.dealerName, value: dealer.name),
+                _InfoRow(label: l10n.phoneNumber, value: dealer.phone),
+                if (deviceOwnerName != null)
+                  _InfoRow(
+                      label: l10n.deviceOwnerName, value: deviceOwnerName!),
+                if (dealer.contactPerson != null)
+                  _InfoRow(
+                      label: l10n.contactPerson, value: dealer.contactPerson!),
               ],
             ),
           ),

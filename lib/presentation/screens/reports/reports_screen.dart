@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:csv/csv.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:io';
 import '../../../core/l10n/app_localizations.dart';
+import '../../../core/utils/csv_exporter.dart';
 import '../../../domain/models/models.dart';
 import '../../providers/providers.dart';
 
@@ -204,7 +202,7 @@ class _RevenueReport extends ConsumerWidget {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.file_download),
                     label: Text(l10n.exportToCSV),
-                    onPressed: () => _exportToCSV(context, orders),
+                    onPressed: () => _exportToCSV(context, orders, l10n),
                   ),
                 ),
               ],
@@ -228,57 +226,20 @@ class _RevenueReport extends ConsumerWidget {
   }
 
   Future<void> _exportToCSV(
-      BuildContext context, List<RepairOrder> orders) async {
-    final l10n = AppLocalizations.of(context);
-
+    BuildContext context,
+    List<RepairOrder> orders,
+    AppLocalizations l10n,
+  ) async {
     try {
-      List<List<dynamic>> rows = [
-        [
-          'Order ID',
-          'Date',
-          'Customer ID',
-          'Laptop Type',
-          'Problem',
-          'Status',
-          'Total Cost',
-          'Paid',
-          'Remaining',
-        ],
-      ];
+      await ArabicCsvExporter.exportOrdersToCsv(orders, l10n.isArabic);
 
-      for (var order in orders) {
-        rows.add([
-          order.id.substring(0, 8),
-          DateFormat('yyyy-MM-dd').format(order.createdAt),
-          order.customerId?.substring(0, 8),
-          order.laptopType,
-          order.problemDescription,
-          l10n.isArabic ? order.status.nameAr : order.status.nameEn,
-          order.totalCost,
-          order.paidAmount,
-          order.remainingAmount,
-        ]);
-      }
-
-      String csv = const ListToCsvConverter().convert(rows);
-
-      String? outputPath = await FilePicker.platform.saveFile(
-        dialogTitle: l10n.exportToCSV,
-        fileName:
-            'revenue_report_${DateFormat('yyyy-MM-dd').format(DateTime.now())}.csv',
-      );
-
-      if (outputPath != null) {
-        await File(outputPath).writeAsString(csv);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.saveSuccess),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.saveSuccess),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -361,13 +322,23 @@ class _OutstandingBalancesReport extends ConsumerWidget {
       data: (orders) {
         return customersAsync.when(
           data: (customers) {
-            final customerBalances = <String, double>{};
+            final customerBalances = <String, Map<String, dynamic>>{};
 
             for (var order in orders) {
               if (order.remainingAmount > 0 && order.customerId != null) {
-                customerBalances[order.customerId!] =
-                    (customerBalances[order.customerId!] ?? 0) +
-                        order.remainingAmount;
+                if (!customerBalances.containsKey(order.customerId!)) {
+                  final customer =
+                      customers.firstWhere((c) => c.id == order.customerId);
+                  customerBalances[order.customerId!] = {
+                    'name': customer.name,
+                    'phone': customer.phone,
+                    'balance': 0.0,
+                    'orderCount': 0,
+                  };
+                }
+                customerBalances[order.customerId!]!['balance'] +=
+                    order.remainingAmount;
+                customerBalances[order.customerId!]!['orderCount'] += 1;
               }
             }
 
@@ -381,29 +352,67 @@ class _OutstandingBalancesReport extends ConsumerWidget {
             }
 
             final sortedEntries = customerBalances.entries.toList()
-              ..sort((a, b) => b.value.compareTo(a.value));
+              ..sort((a, b) => (b.value['balance'] as double)
+                  .compareTo(a.value['balance'] as double));
 
             return Card(
               child: Column(
-                children: sortedEntries.map((entry) {
-                  final customer =
-                      customers.firstWhere((c) => c.id == entry.key);
-                  return ListTile(
-                    leading: CircleAvatar(
-                      child: Text(customer.name[0].toUpperCase()),
-                    ),
-                    title: Text(customer.name),
-                    subtitle: Text(customer.phone),
-                    trailing: Text(
-                      l10n.currency(entry.value),
-                      style: TextStyle(
-                        color: Colors.red[700],
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                children: [
+                  ...sortedEntries.map((entry) {
+                    return ListTile(
+                      leading: CircleAvatar(
+                        child: Text(entry.value['name'][0].toUpperCase()),
+                      ),
+                      title: Text(entry.value['name']),
+                      subtitle: Text(entry.value['phone']),
+                      trailing: Text(
+                        l10n.currency(entry.value['balance']),
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  const Divider(),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.file_download),
+                        label: Text(l10n.exportToCSV),
+                        onPressed: () async {
+                          try {
+                            await ArabicCsvExporter.exportCustomerBalances(
+                              customerBalances,
+                              l10n.isArabic,
+                            );
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.saveSuccess),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
                       ),
                     ),
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
             );
           },

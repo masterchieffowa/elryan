@@ -1,7 +1,6 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../../../core/l10n/app_localizations.dart';
 import '../../providers/providers.dart';
 import '../customers/customers_screen.dart';
@@ -22,16 +21,24 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedIndex = 0;
 
+  void _refreshAllData() {
+    ref.invalidate(ordersProvider);
+    ref.invalidate(customersProvider);
+    ref.invalidate(dealersProvider);
+    ref.invalidate(accessoriesProvider);
+    ref.invalidate(statisticsProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isArabic = l10n.isArabic;
 
     final screens = [
-      const DashboardTab(),
+      DashboardTab(onRefresh: _refreshAllData),
       const OrdersScreen(),
       const CustomersScreen(),
-      const DealersScreen(), // NEW: Dealers tab
+      const DealersScreen(),
       const AccessoriesScreen(),
       const ReportsScreen(),
     ];
@@ -46,6 +53,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) {
                 setState(() => _selectedIndex = index);
+                // Refresh data when switching tabs
+                _refreshAllData();
               },
               labelType: NavigationRailLabelType.all,
               leading: Column(
@@ -70,17 +79,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   alignment: Alignment.bottomCenter,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SettingsScreen(),
-                          ),
-                        );
-                      },
-                      tooltip: l10n.settings,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: _refreshAllData,
+                          tooltip: l10n.isArabic ? 'تحديث' : 'Refresh',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.settings),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SettingsScreen(),
+                              ),
+                            ).then((_) => _refreshAllData());
+                          },
+                          tooltip: l10n.settings,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -132,9 +151,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// Dashboard Tab remains the same
+// Dashboard Tab with Real-time Updates
 class DashboardTab extends ConsumerWidget {
-  const DashboardTab({super.key});
+  final VoidCallback onRefresh;
+
+  const DashboardTab({super.key, required this.onRefresh});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -145,6 +166,12 @@ class DashboardTab extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.dashboard),
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: onRefresh,
+          ),
+        ],
       ),
       body: statsAsync.when(
         data: (stats) {
@@ -153,6 +180,33 @@ class DashboardTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Last Updated Info
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${l10n.isArabic ? "آخر تحديث" : "Last updated"}: ${DateFormat('HH:mm:ss').format(DateTime.now())}',
+                        style: const TextStyle(color: Colors.blue),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label:
+                            Text(l10n.isArabic ? 'تحديث الآن' : 'Refresh Now'),
+                        onPressed: onRefresh,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
                 // Statistics Cards
                 GridView.count(
                   crossAxisCount: 3,
@@ -197,9 +251,22 @@ class DashboardTab extends ConsumerWidget {
                 const SizedBox(height: 32),
 
                 // Recent Orders
-                Text(
-                  l10n.orders,
-                  style: Theme.of(context).textTheme.titleLarge,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.orders,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: Text(
+                          l10n.isArabic ? 'تحديث القائمة' : 'Refresh List'),
+                      onPressed: () {
+                        ref.invalidate(ordersProvider);
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 const RecentOrdersList(),
@@ -208,7 +275,20 @@ class DashboardTab extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $error'),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.isArabic ? 'إعادة المحاولة' : 'Retry'),
+                onPressed: onRefresh,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -290,7 +370,19 @@ class RecentOrdersList extends ConsumerWidget {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
-              child: Text(l10n.noData),
+              child: Column(
+                children: [
+                  Text(l10n.noData),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.newOrder),
+                    onPressed: () {
+                      // Navigate to orders screen
+                    },
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -313,14 +405,38 @@ class RecentOrdersList extends ConsumerWidget {
                 title: Text(order.laptopType),
                 subtitle: Text(
                     l10n.isArabic ? order.status.nameAr : order.status.nameEn),
-                trailing: Text(l10n.currency(order.remainingAmount)),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      l10n.currency(order.totalCost),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    if (order.remainingAmount > 0)
+                      Text(
+                        l10n.currency(order.remainingAmount),
+                        style: TextStyle(color: Colors.red[700], fontSize: 12),
+                      ),
+                  ],
+                ),
               ),
             );
           },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      error: (error, stack) => Center(
+        child: Column(
+          children: [
+            Text('Error: $error'),
+            TextButton(
+              onPressed: () => ref.invalidate(ordersProvider),
+              child: Text(l10n.isArabic ? 'إعادة المحاولة' : 'Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

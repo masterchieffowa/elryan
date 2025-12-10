@@ -1,6 +1,3 @@
-// lib/presentation/screens/accessories/accessories_screen.dart
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/app_localizations.dart';
@@ -37,10 +34,23 @@ class AccessoriesScreen extends ConsumerWidget {
                   l10n.isArabic ? 'إدارة المخزون' : 'Inventory Management',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.newAccessory),
-                  onPressed: () => _showAccessoryDialog(context, ref),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.shopping_cart),
+                      label: Text(l10n.isArabic ? 'بيع منفصل' : 'Sell Items'),
+                      onPressed: () => _showStandaloneSaleDialog(context, ref),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: Text(l10n.newAccessory),
+                      onPressed: () => _showAccessoryDialog(context, ref),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -86,11 +96,182 @@ class AccessoriesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAccessoryDialog(BuildContext context, WidgetRef ref,
+  // Standalone sale dialog
+  static Future<void> _showStandaloneSaleDialog(
+      BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final accessoriesAsync = ref.read(accessoriesProvider);
+
+    if (!accessoriesAsync.hasValue) return;
+
+    final accessories = accessoriesAsync.value!;
+    final selectedItems = <Accessory, int>{};
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final total = selectedItems.entries.fold<double>(
+            0,
+            (sum, entry) => sum + (entry.key.price * entry.value),
+          );
+
+          return AlertDialog(
+            title: Text(l10n.isArabic
+                ? 'بيع إكسسوارات منفصل'
+                : 'Standalone Accessory Sale'),
+            content: SizedBox(
+              width: 500,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Available accessories
+                  Text(l10n.accessories,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: accessories.length,
+                      itemBuilder: (context, index) {
+                        final accessory = accessories[index];
+                        final isSelected = selectedItems.containsKey(accessory);
+
+                        return ListTile(
+                          title: Text(l10n.isArabic
+                              ? accessory.nameAr
+                              : accessory.nameEn),
+                          subtitle: Text(
+                              '${l10n.price}: ${l10n.currency(accessory.price)} | ${l10n.stockQuantity}: ${accessory.stockQuantity}'),
+                          trailing: isSelected
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove),
+                                      onPressed: () {
+                                        setState(() {
+                                          if (selectedItems[accessory]! > 1) {
+                                            selectedItems[accessory] =
+                                                selectedItems[accessory]! - 1;
+                                          } else {
+                                            selectedItems.remove(accessory);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                    Text('${selectedItems[accessory]}'),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        if (selectedItems[accessory]! <
+                                            accessory.stockQuantity) {
+                                          setState(() {
+                                            selectedItems[accessory] =
+                                                selectedItems[accessory]! + 1;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                )
+                              : ElevatedButton(
+                                  onPressed: accessory.stockQuantity > 0
+                                      ? () {
+                                          setState(() {
+                                            selectedItems[accessory] = 1;
+                                          });
+                                        }
+                                      : null,
+                                  child: const Icon(Icons.add),
+                                ),
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(),
+                  // Total
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(l10n.isArabic ? 'الإجمالي:' : 'Total:',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(l10n.currency(total),
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(l10n.cancel),
+              ),
+              ElevatedButton(
+                onPressed: selectedItems.isEmpty
+                    ? null
+                    : () async {
+                        // Process standalone sale
+                        try {
+                          for (var entry in selectedItems.entries) {
+                            await ref
+                                .read(accessoryRepositoryProvider)
+                                .updateStock(
+                                  entry.key.id,
+                                  -entry.value,
+                                );
+                          }
+
+                          ref.invalidate(accessoriesProvider);
+                          Navigator.pop(context);
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.isArabic
+                                    ? 'تمت العملية بنجاح'
+                                    : 'Sale completed successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red),
+                            );
+                          }
+                        }
+                      },
+                child: Text(l10n.isArabic ? 'إتمام البيع' : 'Complete Sale'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  static Future<void> _showAccessoryDialog(BuildContext context, WidgetRef ref,
       [Accessory? accessory]) async {
     final l10n = AppLocalizations.of(context);
     final nameArController = TextEditingController(text: accessory?.nameAr);
     final nameEnController = TextEditingController(text: accessory?.nameEn);
+    final categoryArController =
+        TextEditingController(text: accessory?.categoryAr);
+    final categoryEnController =
+        TextEditingController(text: accessory?.categoryEn);
     final priceController =
         TextEditingController(text: accessory?.price.toString());
     final stockController =
@@ -119,6 +300,22 @@ class AccessoriesScreen extends ConsumerWidget {
                   decoration: InputDecoration(labelText: l10n.accessoryNameEn),
                   validator: (value) =>
                       value?.isEmpty ?? true ? l10n.fieldRequired : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: categoryArController,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${l10n.isArabic ? "الفئة (عربي)" : "Category (Arabic)"} (${l10n.isArabic ? "اختياري" : "Optional"})',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: categoryEnController,
+                  decoration: InputDecoration(
+                    labelText:
+                        '${l10n.isArabic ? "الفئة (إنجليزي)" : "Category (English)"} (${l10n.isArabic ? "اختياري" : "Optional"})',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -179,6 +376,12 @@ class AccessoriesScreen extends ConsumerWidget {
           await repo.update(accessory.copyWith(
             nameAr: nameArController.text,
             nameEn: nameEnController.text,
+            categoryAr: categoryArController.text.isEmpty
+                ? null
+                : categoryArController.text,
+            categoryEn: categoryEnController.text.isEmpty
+                ? null
+                : categoryEnController.text,
             price: double.parse(priceController.text),
             stockQuantity: int.parse(stockController.text),
           ));
@@ -242,13 +445,14 @@ class AccessoryCard extends ConsumerWidget {
                       onTap: () {
                         Future.delayed(
                           const Duration(milliseconds: 100),
-                          () => _showAccessoryDialog(context, ref, accessory),
+                          () => AccessoriesScreen._showAccessoryDialog(
+                              context, ref, accessory),
                         );
                       },
                     ),
                     PopupMenuItem(
                       child: Text(l10n.delete),
-                      onTap: () => _deleteAccessory(context, ref, accessory),
+                      onTap: () => _deleteAccessory(context, ref),
                     ),
                   ],
                 ),
@@ -291,8 +495,7 @@ class AccessoryCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteAccessory(
-      BuildContext context, WidgetRef ref, Accessory accessory) async {
+  Future<void> _deleteAccessory(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context);
 
     final result = await showDialog<bool>(
@@ -335,10 +538,5 @@ class AccessoryCard extends ConsumerWidget {
         }
       }
     }
-  }
-
-  Future<void> _showAccessoryDialog(
-      BuildContext context, WidgetRef ref, Accessory accessory) async {
-    // Same implementation as in AccessoriesScreen
   }
 }

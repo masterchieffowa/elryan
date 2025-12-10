@@ -12,7 +12,8 @@ import '../dealers/dealers_screen.dart';
 class OrderFormScreen extends ConsumerStatefulWidget {
   final RepairOrder? order;
 
-  const OrderFormScreen({super.key, this.order});
+  const OrderFormScreen(
+      {super.key, this.order, required bool includeAccessories});
 
   @override
   ConsumerState<OrderFormScreen> createState() => _OrderFormScreenState();

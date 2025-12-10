@@ -1,30 +1,68 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+// test/widget_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:elryan/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('ELRYAN app launches and shows login screen',
+      (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: RepairShopApp(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Wait for the app to settle
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify that login screen is shown
+    expect(find.text('الريان'), findsOneWidget); // App name in Arabic
+    expect(find.text('ELRAYAN'), findsOneWidget); // App name in English
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify password field exists
+    expect(find.byType(TextFormField), findsWidgets);
+
+    // Verify login button exists
+    expect(find.widgetWithText(ElevatedButton, 'تسجيل الدخول'),
+        findsOneWidget); // Login in Arabic
+  });
+
+  testWidgets('Login screen has password field and login button',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: RepairShopApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Find password field
+    final passwordField = find.byType(TextFormField);
+    expect(passwordField, findsOneWidget);
+
+    // Find login button
+    final loginButton = find.byType(ElevatedButton);
+    expect(loginButton, findsOneWidget);
+  });
+
+  testWidgets('App has proper localization support',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: RepairShopApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify MaterialApp is properly configured
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+
+    expect(materialApp.supportedLocales, contains(const Locale('ar')));
+    expect(materialApp.supportedLocales, contains(const Locale('en')));
   });
 }
